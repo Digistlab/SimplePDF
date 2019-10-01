@@ -1,21 +1,21 @@
 package com.rez.apps.simplepdf;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Document;
@@ -25,63 +25,76 @@ import com.itextpdf.text.Phrase;
 import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class MainActivity extends AppCompatActivity {
     ProgressDialog loading;
-    String fileName, fileDirectory;
+    String fileName, fileDirectory, fileMessages;
+
+    private static final int READ_REQUEST_CODE = 42;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button mGenerate = findViewById(R.id.btnGenerate);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-        fileName = "simplePDF.pdf";
-        fileDirectory = "Dir";
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setElevation(0);
+            actionBar.setTitle("Simple PDF");
+        }
 
-        mGenerate.setOnClickListener(new View.OnClickListener() {
+        Button generatePDF = findViewById(R.id.btnGenerate);
+        Button openPDF = findViewById(R.id.btnOpenPDF);
+        final EditText fileNameText = findViewById(R.id.etFilename);
+        final EditText fileMessagesText = findViewById(R.id.etFileMessages);
+
+        fileDirectory = "SimplePDF";
+
+        generatePDF.setOnClickListener(new View.OnClickListener() {
+            String fileName;
+            String fileMessages;
+
             @Override
             public void onClick(View view) {
-                loading = ProgressDialog.show(MainActivity.this, null, "Loading", true, false);
 
-                new android.os.Handler().postDelayed(
-                        new Runnable() {
-                            public void run() {
-                                pdfGenerate("Hello World!");
-                            }
-                        }, 2000);
+                if (fileNameText.getText().toString().isEmpty() && fileMessagesText.getText().toString().isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Provide any data first", Toast.LENGTH_SHORT).show();
+                } else {
+
+                    fileName = fileNameText.getText().toString();
+                    fileMessages = fileMessagesText.getText().toString();
+
+                    loading = ProgressDialog.show(MainActivity.this, null, "Loading", true, false);
+                    new android.os.Handler().postDelayed(
+                            new Runnable() {
+                                public void run() {
+                                    generatePDF(fileName, fileMessages);
+                                }
+                            }, 2000);
+                }
+            }
+        });
+
+        openPDF.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(MainActivity.this, "Choose the pdf file", Toast.LENGTH_SHORT).show();
+                performFileSearch();
             }
         });
     }
 
-    private void generatePDF() {
-        PdfDocument pdfDocument = new PdfDocument();
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(50, 50, 1).create();
-        PdfDocument.Page page = pdfDocument.startPage(pageInfo);
+    private void generatePDF(String nameOfFile, String message) {
+        String fileName = nameOfFile + ".pdf";
 
-        Canvas canvas = page.getCanvas();
-        Paint paint = new Paint();
-        paint.setColor(Color.BLUE);
-        canvas.drawCircle(200, 200, 100, paint);
-
-        pdfDocument.finishPage(page);
-
-        try {
-//            pdfDocument.writeTo(new FileOutputStream(new File("/sdcard/test.pdf")));
-            pdfDocument.writeTo(new FileOutputStream(new File(Environment.getExternalStorageDirectory().getPath() + "/simplepdf.pdf")));
-            Toast.makeText(this, "Sukses", Toast.LENGTH_SHORT).show();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Gagal", Toast.LENGTH_SHORT).show();
-        }
-
-        pdfDocument.close();
-    }
-
-    private void pdfGenerate(String text) {
         Document doc = new Document();
 
         try {
@@ -99,24 +112,21 @@ public class MainActivity extends AppCompatActivity {
             //open the document
             doc.open();
 
-            Paragraph p1 = new Paragraph(text);
-            p1.setAlignment(Paragraph.ALIGN_LEFT);
+            Paragraph textData = new Paragraph(message);
+            textData.setAlignment(Paragraph.ALIGN_JUSTIFIED);
 
             //add paragraph to document
-            doc.add(p1);
-            doc.add(new Phrase("Kalimat 1"));
-            doc.add(new Phrase("Kal\nimat 2"));
-            doc.add(new Paragraph(new Phrase("Haihaihai")));
-            doc.add(new Phrase("Kalimat 3"));
-            doc.add(new Chunk("\nK A L I M A T  4"));
+            doc.add(textData);
 
             loading.dismiss();
-            Toast.makeText(this, "Sukses", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Success, file saved to sdcard0/SimplePDF/" + fileName, Toast.LENGTH_LONG).show();
 
         } catch (DocumentException de) {
             Log.e("PDFCreator", "DocumentException:" + de);
+            Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             Log.e("PDFCreator", "ioException:" + e);
+            Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
         } finally {
             doc.close();
             loading.dismiss();
@@ -129,6 +139,8 @@ public class MainActivity extends AppCompatActivity {
 
         File pdfFile = new File(Environment.getExternalStorageDirectory() + "/" + directory + "/" + file);
         Uri path = Uri.fromFile(pdfFile);
+        Log.i("Tag pdfFile", pdfFile.toString());
+        Log.i("Tag Uripath", path.toString());
 
         // Setting the intent for pdf reader
         Intent pdfIntent = new Intent(Intent.ACTION_VIEW);
@@ -139,6 +151,68 @@ public class MainActivity extends AppCompatActivity {
             startActivity(pdfIntent);
         } catch (ActivityNotFoundException e) {
             Toast.makeText(MainActivity.this, "Can't read pdf file", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Fires an intent to spin up the "file chooser" UI and select an image.
+     */
+    public void performFileSearch() {
+
+        // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
+        // browser.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
+        // Filter to only show results that can be "opened", such as a
+        // file (as opposed to a list of contacts or timezones)
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        // Filter to show only images, using the image MIME data type.
+        // If one wanted to search for ogg vorbis files, the type would be "audio/ogg".
+        // To search for all documents available via installed storage providers,
+        // it would be "*/*".
+        intent.setType("application/pdf");
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+
+        startActivityForResult(intent, READ_REQUEST_CODE);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        File file = null;
+
+        // The ACTION_OPEN_DOCUMENT intent was sent with the request code
+        // READ_REQUEST_CODE. If the request code seen here doesn't match, it's the
+        // response to some other intent, and the code below shouldn't run at all.
+
+        if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            // The document selected by the user won't be returned in the intent.
+            // Instead, a URI to that document will be contained in the return intent
+            // provided to this method as a parameter.
+            // Pull that URI using resultData.getData().
+            Uri pdfData = null;
+            if (resultData != null) {
+                pdfData = resultData.getData();
+                Log.i("Tag resultData", resultData.toString());
+                Log.i("Tag resultDatagetstring", resultData.getDataString());
+                Log.i("Tag resultDatagetpath", resultData.getData().getPath().toString());
+                Log.i("Tag pdfdata", pdfData.getPath().toString());
+
+                file = new File(resultData.getDataString());
+
+                Uri path = Uri.fromFile(file);
+
+                Intent pdfIntent = new Intent(Intent.ACTION_VIEW);
+                pdfIntent.setDataAndType(path, "application/pdf");
+                pdfIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+                try {
+                    startActivity(pdfIntent);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(MainActivity.this, "Can't read pdf file", Toast.LENGTH_SHORT).show();
+                }
+
+            }
         }
     }
 }
