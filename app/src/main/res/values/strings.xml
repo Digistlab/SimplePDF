@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Simple PDF</string>
+    <string name="action_title_generate">Generate PDF</string>
+    <string name="action_title_read">Read PDF</string>
+    <string name="action_generate">Generate</string>
+    <string name="action_read">Read</string>
+</resources>
