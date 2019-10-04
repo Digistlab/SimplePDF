@@ -211,7 +211,6 @@ public class MainActivity extends AppCompatActivity {
                 } catch (ActivityNotFoundException e) {
                     Toast.makeText(MainActivity.this, "Can't read pdf file", Toast.LENGTH_SHORT).show();
                 }
-
             }
         }
     }
